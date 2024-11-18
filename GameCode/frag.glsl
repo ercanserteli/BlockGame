@@ -28,7 +28,7 @@ float ShadowCalculation(int CascadeIndex, vec4 fragPosSunSpace) {
   vec3 projCoords = fragPosSunSpace.xyz;
   projCoords = projCoords * 0.5 + 0.5; // converting -1,1 -> 0,1
 
-  float bias = max(0.001 * (1.0 - dot(normal, normalize(sunPos))), 0.0001);
+  float bias = max(0.00001 * (1.0 - dot(normal, normalize(sunPos))), 0.000001);
   float closestDepth = texture(shadowMap[CascadeIndex], projCoords.xy).r;
   float currentDepth = projCoords.z;
   float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
@@ -42,7 +42,7 @@ float ShadowCalculation(int CascadeIndex, vec4 fragPosSunSpace) {
 }
 
 void main() {
-  float ambientStrength = ambientBase + 0.1f * aoFactor;
+  float ambientStrength = ambientBase + 0.05f * aoFactor;
   vec3 ambient = ambientStrength * sunColor;
 
   vec3 lightDir = normalize(sunPos);
@@ -51,15 +51,15 @@ void main() {
 
   float shadow = 0.0;
 
-  //  for debug
-  const vec3 colors[] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+
+  // const vec3 shadowMapColors[] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};  //  uncomment for debug colors
+
   vec3 realColor = vertexColor;
-  //\ for debug
 
   for (int i = 0; i < NUM_CASCADES; i++) {
     if (clipSpacePosZ <= cascadeEnds[i]) {
       shadow = ShadowCalculation(i, fragPosSunSpace[i]);
-      // realColor = colors[i];  // uncomment for debug colors
+      // realColor = shadowMapColors[i];  // uncomment for debug colors
       break;
     }
   }

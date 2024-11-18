@@ -82,7 +82,7 @@ struct ChunkMap {
 
 extern float32 block_noise_values[];
 extern float32 cube_vertices_with_normal[];
-extern Vector3f block_color_map[];
+extern Vector3f * block_color_map;
 
 inline void pos_to_block_pos(const Vector3f pos, BlockPos &block_pos) {
     block_pos.chunk_x = (int32)floor((pos.x + 0.5f) / (float32)Config::World::CHUNK_SIZE);

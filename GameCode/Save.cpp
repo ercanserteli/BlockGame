@@ -62,7 +62,7 @@ bool load_state(GameState *state) {
         broken = true;
     }
     num = SDL_RWread(fp, &state->stars, sizeof(state->stars), 1);
-    if (num != 1) {
+    if (num != 1 || (state->stars[0].x == 0.f && state->stars[0].y == 0.f && state->stars[0].z == 0.f)) {
         generate_stars(state->stars);
         LogError("Could not load stars from file!");
         broken = true;

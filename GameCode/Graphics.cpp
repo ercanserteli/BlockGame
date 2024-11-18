@@ -118,7 +118,7 @@ void initialize_shadow_graphics() {
     const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
     if (status != GL_FRAMEBUFFER_COMPLETE) {
-        LogError("Shadow FrameBuffer error, status: 0x%x\n", status);
+        LogError("Shadow FrameBuffer error, status: 0x%x", status);
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -126,7 +126,7 @@ void initialize_shadow_graphics() {
 
 void initialize(const GameState *state) {
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-        LogError("Failed to initialize OpenGL context\n");
+        LogError("Failed to initialize OpenGL context");
         return;
     }
 
@@ -411,7 +411,7 @@ void draw(GameState *state, const int32 screen_width, const int32 screen_height,
     glUniform3fv(main_shader.sun_pos_loc, 1, (float32 *)&state->sun.pos);
     glUniform3fv(main_shader.view_pos_loc, 1, (float32 *)&state->player.pos);
     glUniform3fv(main_shader.sky_color_loc, 1, (float32 *)&state->sun.sky_color);
-    glUniform1f(main_shader.ambient_base_loc, 0.4f);
+    glUniform1f(main_shader.ambient_base_loc, 0.2f);
     glUniform1f(main_shader.specular_strength_loc, state->sun.specular_strength);
     glUniform1f(main_shader.diffuse_strength_loc, state->sun.diffuse_strength);
     glUniform1f(main_shader.culling_distance_loc, Config::World::DRAW_RADIUS * 32);

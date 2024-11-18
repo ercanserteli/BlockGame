@@ -60,7 +60,7 @@ float32 cube_vertices_with_normal[] = {
     -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 };
 
-Vector3f block_color_map[] = {
+Vector3f block_color_map_classic[] = {
     {0.0f, 0.0f, 0.0f},
     {0.1f, 0.1f, 0.9f},
     {0.6f, 0.5f, 0.3f},
@@ -72,7 +72,22 @@ Vector3f block_color_map[] = {
     {0.4f, 0.4f, 0.4f},
     {0.9f, 0.9f, 0.9f}
 };
+
+Vector3f block_color_map_pastel[] = {
+    {0.0f, 0.0f, 0.0f},
+    {0.619608f, 0.486275f, 0.694118f},
+    {0.792157f, 0.541176f, 0.713725f},
+    {0.909804f, 0.705882f, 0.756863f},
+    {0.682353f, 0.733333f, 0.831373f},
+    {0.729412f, 0.843137f, 0.905882f},
+    {0.803922f, 0.756863f, 1.000000f},
+    {0.749020f, 0.925490f, 1.000000f},
+    {1.000000f, 0.964706f, 0.890196f},
+    {1.000000f, 0.800000f, 0.917647f}
+};
 // clang-format on
+
+Vector3f *block_color_map = block_color_map_pastel;
 
 float32 block_noise_values[Config::World::CHUNK_SIZE * Config::World::CHUNK_SIZE * 4 * 4];
 

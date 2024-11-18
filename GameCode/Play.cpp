@@ -56,7 +56,7 @@ void update_sun(GameState *state, float32 time_delta, const ControllerInput *con
     const glm::quat rot = {1.0f, 0.0f, 0.0f, 0.0f};
     sun.rot = glm::rotate(rot, -sun.age, {1, 0, 0});
 
-    sun.diffuse_strength = MAX(0.0f, 0.25f + sun_sin);
+    sun.diffuse_strength = MIN(0.85f, MAX(0.0f, sun_sin));
     sun.specular_strength = sun_sin > 0 ? 1.f : 0.f;
 
     sun.star_visibility = MIN(1.0f, MAX(0.0f, -sun_sin + 0.25f));
