@@ -21,6 +21,7 @@ static bool closing = false;
 static void *game_lib_handle;
 static uint64 game_lib_time;
 static char *save_path;
+static uint32 gamepad_index = 0;
 
 SDL_GameController *gamepad_handles[Config::System::MAX_CONTROLLERS];
 
@@ -278,7 +279,6 @@ static void sdl_init_audio(int32 samples_per_second, uint16 buffer_sample_size) 
     SDL_PauseAudio(0);
 }
 
-static uint32 gamepad_index = 0;
 static void sdl_init_gamepads() {
     SDL_GameControllerAddMapping(
         "030000001008000001e5000000000000,NEXT SNES "
@@ -401,38 +401,42 @@ void handle_hot_reload(char *base_path, InitializeFuncType initialize_func, Relo
     }
 }
 
-int32 main(int32, char **) {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
-        std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
-        return 1;
+void log_fps(uint64 last_counter, uint64 before_sleep_counter, uint64 end_counter, uint64 perf_frequency) {
+    const uint64 work_elapsed = before_sleep_counter - last_counter;
+    const uint64 total_elapsed = end_counter - last_counter;
+    const float64 ms_per_frame_work = (((1000.0 * (float64)work_elapsed) / (float64)perf_frequency));
+    const float64 ms_per_frame_total = (((1000.0 * (float64)total_elapsed) / (float64)perf_frequency));
+    const float64 fps = (float64)perf_frequency / (float64)total_elapsed;
+    const float64 work_fps = (float64)perf_frequency / (float64)work_elapsed;
+    LogDebug("%.02f ms/f (%.02f work, %.02f sleep), %.01f fps (%0.1f ideal fps)", ms_per_frame_total, ms_per_frame_work,
+             ms_per_frame_total - ms_per_frame_work, fps, work_fps);
+}
+
+bool allocate_memory(GameMemory &memory) {
+    memory.permanent_storage_size = Megabytes(128);
+#ifdef DEBUG
+    // 2 MB is more than 10 minutes of input record
+    memory.record_storage_size = memory.permanent_storage_size + Megabytes(2);
+#endif
+    memory.transient_storage_size = Megabytes(64);
+    const uint64 total_size = memory.permanent_storage_size + memory.record_storage_size + memory.transient_storage_size;
+#ifdef DEBUG
+    uint64 memory_begin = Terabytes(2);
+#else
+    uint64 memory_begin = 0;
+#endif
+    void *memory_pointer = VirtualAlloc((LPVOID)memory_begin, total_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!memory_pointer) {
+        LogError("Could not allocate memory!");
+        return false;
     }
-    ASSERT(atexit(SDL_Quit) == 0);
+    memory.permanent_storage = memory_pointer;
+    memory.record_storage = (uint8 *)memory_pointer + memory.permanent_storage_size;
+    memory.transient_storage = (uint8 *)memory.record_storage + memory.record_storage_size;
+    return true;
+}
 
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
-        LogError("SDL_mixer could not initialize! SDL_mixer Error: %s", Mix_GetError());
-    }
-
-    char *base_path = SDL_GetBasePath();
-    // save_path = SDL_GetPrefPath("", GameName);
-    save_path = new char[Config::System::MAX_PATH_LEN];
-    strcpy_s(save_path, Config::System::MAX_PATH_LEN, base_path);
-    strcat_s(save_path, Config::System::MAX_PATH_LEN, "saves\\");
-    LogInfo("Base path: %s", base_path);
-    LogWarn("Save path: %s", save_path);
-    create_dir(save_path);
-
-    InitializeFuncType initialize_func;
-    ReloadInitFuncType reload_init_func;
-    FinalizeFuncType finalize_func;
-    UpdateFuncType game_loop_func;
-    const bool result = load_game_lib(base_path, &initialize_func, &reload_init_func, & game_loop_func, &finalize_func);
-    if (!result) {
-        return 1;
-    }
-
-    SDL_Window *window = nullptr;
-    SDL_Surface *screen_surface = nullptr;
-
+bool sdl_init_graphics(SDL_Window *&window, SDL_Surface *&screen_surface) {
     int32 screen_width = Config::Graphics::DEBUG_WINDOW_WIDTH;
     int32 screen_height = Config::Graphics::DEBUG_WINDOW_HEIGHT;
     Uint32 window_properties = SDL_WINDOW_OPENGL;
@@ -441,7 +445,7 @@ int32 main(int32, char **) {
 #else
     SDL_DisplayMode display_mode;
     const int32 should_be_zero = SDL_GetCurrentDisplayMode(0, &display_mode);
-    window_properties |= SDL_WINDOW_BORDERLESS;  // SDL_WINDOW_FULLSCREEN_DESKTOP;
+    window_properties |= SDL_WINDOW_BORDERLESS;
     if (should_be_zero != 0) {
         LogError("Could not get display mode");
     } else {
@@ -467,7 +471,7 @@ int32 main(int32, char **) {
     window = SDL_CreateWindow(GameName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screen_width, screen_height, window_properties);
     if (!window) {
         LogError("Window could not be created! SDL_Error: %s\n", SDL_GetError());
-        return 1;
+        return false;
     }
     LogInfo("Window is created");
 
@@ -475,47 +479,68 @@ int32 main(int32, char **) {
     const SDL_GLContext gl_ctx = SDL_GL_CreateContext(window);
     if (!gl_ctx) {
         LogError("Could not create OpenGL context: %s\n", SDL_GetError());
-        return 1;
+        return false;
     }
     SDL_GL_SetSwapInterval(1);
 
     screen_surface = SDL_GetWindowSurface(window);
     SDL_ShowCursor(SDL_DISABLE);
-
-    /* Opening gamepads */
     sdl_init_gamepads();
-
-    /* Opening audio device */
     sdl_init_audio(48000, 4096);
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
+    return true;
+}
 
-    /* Allocating game memory */
-    PlatformState platform_state = {};
-    GameMemory &memory = platform_state.game_memory;
-    memory.permanent_storage_size = Megabytes(128);
-#ifdef DEBUG
-    // 2 MB is more than 10 minutes of input
-    memory.record_storage_size = memory.permanent_storage_size + Megabytes(2);
-#endif
-    memory.transient_storage_size = Megabytes(64);
-    const uint64 total_size = memory.permanent_storage_size + memory.record_storage_size + memory.transient_storage_size;
-#ifdef DEBUG
-    uint64 memory_begin = Terabytes(2);
-#else
-    uint64 memory_begin = 0;
-#endif
-    void *memory_pointer = VirtualAlloc((LPVOID)memory_begin, total_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    if (!memory_pointer) {
-        LogError("Could not allocate memory!");
+void sleep(float32 seconds, uint64 last_counter, uint64 perf_frequency, float32 TARGET_SPF) {
+    const int32 time_to_sleep = (int32)((seconds) * 1000) - 1;
+    if (time_to_sleep > 0) {
+        SDL_Delay(time_to_sleep);
+    }
+    while (sdl_get_seconds_elapsed(last_counter, SDL_GetPerformanceCounter(), perf_frequency) < TARGET_SPF) {
+        // Precise waiting for the last 1 ms...
+    }
+}
+
+int32 main(int32, char **) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) != 0) {
+        std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
         return 1;
     }
-    memory.permanent_storage = memory_pointer;
-    memory.record_storage = (uint8 *)memory_pointer + memory.permanent_storage_size;
-    memory.transient_storage = (uint8 *)memory.record_storage + memory.record_storage_size;
+    ASSERT(atexit(SDL_Quit) == 0);
 
-    constexpr float32 GAME_UPDATE_HZ = 60;
-    constexpr float32 TARGET_SECONDS_PER_FRAME = 1.0f / GAME_UPDATE_HZ;
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+        LogError("SDL_mixer could not initialize! SDL_mixer Error: %s", Mix_GetError());
+    }
+
+    char *base_path = SDL_GetBasePath();
+    save_path = new char[Config::System::MAX_PATH_LEN];
+    strcpy_s(save_path, Config::System::MAX_PATH_LEN, base_path);
+    strcat_s(save_path, Config::System::MAX_PATH_LEN, "saves\\");
+    LogInfo("Base path: %s", base_path);
+    LogWarn("Save path: %s", save_path);
+    create_dir(save_path);
+
+    InitializeFuncType game_initialize;
+    ReloadInitFuncType game_on_reload;
+    FinalizeFuncType game_finalize;
+    UpdateFuncType game_loop;
+    if (!load_game_lib(base_path, &game_initialize, &game_on_reload, &game_loop, &game_finalize)) {
+        return 1;
+    }
+
+    SDL_Window *window = nullptr;
+    SDL_Surface *screen_surface = nullptr;
+    if(!sdl_init_graphics(window, screen_surface)) {
+        return 1;
+    }
+
+    PlatformState platform_state = {};
+    if (!allocate_memory(platform_state.game_memory)) {
+        return 1;
+    }
+
+    constexpr float32 TARGET_SPF = 1.0f / Config::Game::TARGET_FPS;
     const uint64 perf_frequency = SDL_GetPerformanceFrequency();
 
     ControllerInput controller = {};
@@ -523,21 +548,17 @@ int32 main(int32, char **) {
     uint64 update_counter = last_counter;
     uint64 frame_count = 0;
 
-    initialize_func(&memory, save_path);
+    game_initialize(&platform_state.game_memory, save_path);
 
     /* Main loop */
     while (true) {
-
-#ifdef DEBUG
-        handle_hot_reload(base_path, initialize_func, reload_init_func, finalize_func, game_loop_func, platform_state);
-#endif
-
         handle_events(controller, platform_state);
         if (controller.button_select) {
             closing = true;
         }
 
 #ifdef DEBUG
+        handle_hot_reload(base_path, game_initialize, game_on_reload, game_finalize, game_loop, platform_state);
         handle_record_replay(controller, platform_state);
 #endif
 
@@ -545,37 +566,25 @@ int32 main(int32, char **) {
         const float32 time_delta = sdl_get_seconds_elapsed(update_counter, new_update_counter, perf_frequency);
         update_counter = new_update_counter;
 
-        game_loop_func(&memory, screen_surface, window, &controller, time_delta);
+        game_loop(&platform_state.game_memory, screen_surface, window, &controller, time_delta);
         
         const uint64 before_sleep_counter = SDL_GetPerformanceCounter();
         const float32 seconds_elapsed = sdl_get_seconds_elapsed(last_counter, before_sleep_counter, perf_frequency);
-        if (seconds_elapsed < TARGET_SECONDS_PER_FRAME) {
-            const int32 time_to_sleep = (int32)((TARGET_SECONDS_PER_FRAME - seconds_elapsed) * 1000) - 1;
-            if (time_to_sleep > 0) {
-                SDL_Delay(time_to_sleep);
-            }
-            while (sdl_get_seconds_elapsed(last_counter, SDL_GetPerformanceCounter(), perf_frequency) < TARGET_SECONDS_PER_FRAME) {
-                // Waiting...
-            }
+        if (seconds_elapsed < TARGET_SPF) {
+            sleep(TARGET_SPF - seconds_elapsed, last_counter, perf_frequency, TARGET_SPF);
         }
 
         const uint64 end_counter = SDL_GetPerformanceCounter();
 
 #ifdef DEBUG
         if (frame_count % 120 == 0) {
-            const uint64 work_elapsed = before_sleep_counter - last_counter;
-            const uint64 total_elapsed = end_counter - last_counter;
-            const float64 ms_per_frame_work = (((1000.0 * (float64)work_elapsed) / (float64)perf_frequency));
-            const float64 ms_per_frame_total = (((1000.0 * (float64)total_elapsed) / (float64)perf_frequency));
-            const float64 fps = (float64)perf_frequency / (float64)total_elapsed;
-            const float64 work_fps = (float64)perf_frequency / (float64)work_elapsed;
-            LogDebug("%.02f ms/f (%.02f work, %.02f sleep), %.01f fps (%0.1f ideal fps)", ms_per_frame_total, ms_per_frame_work,
-                     ms_per_frame_total - ms_per_frame_work, fps, work_fps);
+            log_fps(last_counter, before_sleep_counter, end_counter, perf_frequency);
         }
 #endif
+
         last_counter = end_counter;
         if (closing) {
-            finalize_func(&memory);
+            game_finalize(&platform_state.game_memory);
             break;
         }
         frame_count++;

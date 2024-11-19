@@ -46,6 +46,7 @@ struct Game {
     static constexpr uint32 STAR_COUNT = 64 * 1024;
     static constexpr uint32 PARTICLE_LIMIT = 128;
     static constexpr uint32 ENTITY_LIMIT = 128;
+    static constexpr float32 TARGET_FPS = 60.f;
 };
 
 struct System {

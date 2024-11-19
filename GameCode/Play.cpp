@@ -236,14 +236,14 @@ void update_player(GameState *state, float32 time_delta, ControllerInput *contro
     }
     // Go up
     if (controller->button_l2) {
-        Vector3f down = {0, -1, 0};
+        const Vector3f down = {0, -1, 0};
         acceleration -= down * Config::Player::ACCELERATION;
         state->player.on_ground = false;
     }
     // Jump
     if (controller->button_r2) {
         if (state->player.on_ground) {
-            Vector3f up = {0, 1, 0};
+            const Vector3f up = {0, 1, 0};
             acceleration += up * Config::Player::ACCELERATION * 10;
             state->player.on_ground = false;
         }
