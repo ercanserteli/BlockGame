@@ -60,7 +60,7 @@ void initialize_star_graphics(const Vector3f *stars) {
     glEnableVertexAttribArray(0);
 }
 
-void initialize_hud_graphics() {
+void initialize_hud() {
     // Crosshair that is displayed at the center of the screen
     const Vector3f color = {0.25f, 0.25f, 0.25f};
     constexpr float32 S = 0.003f;  // Short edge
@@ -94,7 +94,7 @@ void initialize_hud_graphics() {
     }
 }
 
-void initialize_shadow_graphics() {
+void initialize_shadow_maps() {
     constexpr float32 BORDER_COLOR[] = {1.0f, 1.0f, 1.0f, 1.0f};
     glGenFramebuffers(1, &depth_map_fbo);
 
@@ -150,8 +150,8 @@ void initialize(const GameState *state) {
     DebugVisuals::initialize();
     initialize_cube_graphics();
     initialize_star_graphics(state->stars);
-    initialize_hud_graphics();
-    initialize_shadow_graphics();
+    initialize_hud();
+    initialize_shadow_maps();
 
     stbi_flip_vertically_on_write(true);
 }
@@ -356,7 +356,7 @@ void draw(GameState *state, const int32 screen_width, const int32 screen_height,
     const Vector3f look_at_pos = state->player.pos + state->player.direction;
     glm::mat4 view = glm::lookAt(state->player.pos.as_vec3(), look_at_pos.as_vec3(), camera_up);
     glm::mat4 projection =
-        glm::perspective(glm::radians(state->player.fov), (float32)screen_width / (float32)screen_height, 0.1f, Config::Graphics::CULLING_DISTANCE);
+        glm::perspective(glm::radians(state->player.fov), (float32)screen_width / (float32)screen_height, 0.1f, Config::Graphics::CULLING_DISTANCE * 100);
     const Frustum player_frustum(view, projection);
 
     constexpr float32 CASCADE_ENDS[] = {Config::Graphics::SHADOW_NEAR_PLANE, 100.0f, 400.0f, 1600.0f};
@@ -414,7 +414,7 @@ void draw(GameState *state, const int32 screen_width, const int32 screen_height,
     glUniform1f(main_shader.ambient_base_loc, 0.2f);
     glUniform1f(main_shader.specular_strength_loc, state->sun.specular_strength);
     glUniform1f(main_shader.diffuse_strength_loc, state->sun.diffuse_strength);
-    glUniform1f(main_shader.culling_distance_loc, Config::World::DRAW_RADIUS * 32);
+    glUniform1f(main_shader.culling_distance_loc, Config::Graphics::CULLING_DISTANCE);
 
     if (shadow_mode == ShadowMode::SHADOW_MAP) {
         glUniformMatrix4fv(main_shader.sun_space_matrix_loc, Config::Graphics::SHADOW_MAP_CASCADE_COUNT, GL_FALSE, glm::value_ptr(sun_space_matrices[0]));

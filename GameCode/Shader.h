@@ -5,6 +5,7 @@
 
 struct Shader {
     void initialize(const char *vertex_source, const char *fragment_source);
+    void initialize(const char *vertex_source, const char *geometry_source, const char *fragment_source);
     void use() const;
     int32 get_uniform_loc(const char *uniform_name) const { return glGetUniformLocation(shader_program, uniform_name); }
 

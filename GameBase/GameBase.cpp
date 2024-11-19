@@ -433,8 +433,8 @@ int32 main(int32, char **) {
     SDL_Window *window = nullptr;
     SDL_Surface *screen_surface = nullptr;
 
-    int32 screen_width = Config::Graphics::DEFAULT_SCREEN_WIDTH;
-    int32 screen_height = Config::Graphics::DEFAULT_SCREEN_HEIGHT;
+    int32 screen_width = Config::Graphics::DEBUG_WINDOW_WIDTH;
+    int32 screen_height = Config::Graphics::DEBUG_WINDOW_HEIGHT;
     Uint32 window_properties = SDL_WINDOW_OPENGL;
 #ifdef DEBUG
     SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_DEBUG);

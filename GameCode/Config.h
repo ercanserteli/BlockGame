@@ -2,19 +2,6 @@
 #include "Definitions.h"
 
 namespace Config {
-struct Graphics {
-    static constexpr int32 DEFAULT_SCREEN_WIDTH = 1920;
-    static constexpr int32 DEFAULT_SCREEN_HEIGHT = 1080;
-    static constexpr float32 DEFAULT_FOV = 60.0f;
-    static constexpr float32 CULLING_DISTANCE = 48000.0f;
-
-    // CSM
-    static constexpr int32 SHADOW_MAP_WIDTH = 4096;
-    static constexpr int32 SHADOW_MAP_HEIGHT = 4096;
-    static constexpr int32 SHADOW_MAP_CASCADE_COUNT = 3;
-    static constexpr float32 SHADOW_NEAR_PLANE = 1.0f;
-    static constexpr float32 SHADOW_FAR_PLANE = CULLING_DISTANCE;
-};
 
 struct World {
     static constexpr int32 CHUNK_SIZE = 32;
@@ -23,6 +10,20 @@ struct World {
     static constexpr float32 BLOCK_PLACE_COOLDOWN = 0.3f;
     static constexpr float32 SUN_DISTANCE = 64.f;
     static constexpr float32 SUN_SPEED = 0.01f;
+};
+
+struct Graphics {
+    static constexpr int32 DEBUG_WINDOW_WIDTH = 1920;
+    static constexpr int32 DEBUG_WINDOW_HEIGHT = 1080;
+    static constexpr float32 DEFAULT_FOV = 60.0f;
+    static constexpr float32 CULLING_DISTANCE = (World::DRAW_RADIUS + 1) * World::CHUNK_SIZE;
+
+    // CSM
+    static constexpr int32 SHADOW_MAP_WIDTH = 4096;
+    static constexpr int32 SHADOW_MAP_HEIGHT = 4096;
+    static constexpr int32 SHADOW_MAP_CASCADE_COUNT = 3;
+    static constexpr float32 SHADOW_NEAR_PLANE = 1.0f;
+    static constexpr float32 SHADOW_FAR_PLANE = CULLING_DISTANCE;
 };
 
 struct Physics {
