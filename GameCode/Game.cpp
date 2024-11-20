@@ -20,7 +20,7 @@ extern "C" dll_export void initialize(const GameMemory *memory, char *save_path)
 
     if (!load_state(state)) {
         char save_dir[Config::System::MAX_PATH_LEN];
-        ASSERT(snprintf(save_dir, Config::System::MAX_PATH_LEN, "%s%s", state->save_path, state->world_name) > 0);
+        join_path(save_dir, state->save_path, state->world_name);
         create_dir(save_dir);
     }
 

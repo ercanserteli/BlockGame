@@ -2,6 +2,9 @@
 
 #include "Definitions.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
 // Platform independent create dir
 #ifdef _WIN32
 #include <direct.h>
@@ -32,4 +35,8 @@ inline int32 mod(const int32 a, const int32 b) {
     int32 ret = a % b;
     if (ret < 0) ret += b;
     return ret;
+}
+
+inline void join_path(char *dst, const char *base_path, const char *sub_path) {
+    ASSERT(snprintf(dst, Config::System::MAX_PATH_LEN, "%s%s", base_path, sub_path) > 0);
 }

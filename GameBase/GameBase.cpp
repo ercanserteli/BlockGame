@@ -25,7 +25,7 @@ struct PlatformState {
 static bool closing = false;
 static void *game_lib_handle;
 static uint64 game_lib_time;
-static char *save_path;
+static char save_path[Config::System::MAX_PATH_LEN];
 static uint32 gamepad_index = 0;
 
 SDL_GameController *gamepad_handles[Config::System::MAX_CONTROLLERS];
@@ -320,9 +320,9 @@ static void sdl_init_gamepads() {
     }
 }
 
-bool is_game_lib_out_of_date(char *base_path) {
+bool is_game_lib_out_of_date(const char *base_path) {
     char org_filename[Config::System::MAX_PATH_LEN];
-    ASSERT(snprintf(org_filename, Config::System::MAX_PATH_LEN, "%s%s", base_path, "GameCode.dll") > 0);
+    join_path(org_filename, base_path, "GameCode.dll");
 
     struct _stat64 file_stat = {};
     _stati64(((const char *)org_filename), &file_stat);
@@ -370,15 +370,15 @@ bool copy_file(char *src_path, char *dst_path) {
     return false;
 }
 
-bool load_game_lib(char *base_path, InitializeFuncType *initialize_func, ReloadInitFuncType *reload_init_func, UpdateFuncType *update_func, FinalizeFuncType *finalize_func) {
+bool load_game_lib(const char *base_path, InitializeFuncType *initialize_func, ReloadInitFuncType *reload_init_func, UpdateFuncType *update_func, FinalizeFuncType *finalize_func) {
 #ifndef DEBUG
     return load_functions_from_game_lib("GameCode.dll", initialize_func, reload_init_func, update_func, finalize_func);
 #else
     char org_filename[Config::System::MAX_PATH_LEN];
     char new_filename[Config::System::MAX_PATH_LEN];
 
-    ASSERT(snprintf(org_filename, Config::System::MAX_PATH_LEN, "%s%s", base_path, "GameCode.dll") > 0);
-    ASSERT(snprintf(new_filename, Config::System::MAX_PATH_LEN, "%s%s", base_path, "GameCode_temp.dll") > 0);
+    join_path(org_filename, base_path, "GameCode.dll");
+    join_path(new_filename, base_path, "GameCode_temp.dll");
 
     int32 tries = 50;
     while (true) {
@@ -540,9 +540,7 @@ int32 main(int32, char **) {
     }
 
     char *base_path = SDL_GetBasePath();
-    save_path = new char[Config::System::MAX_PATH_LEN];
-    strcpy_s(save_path, Config::System::MAX_PATH_LEN, base_path);
-    strcat_s(save_path, Config::System::MAX_PATH_LEN, "saves\\");
+    join_path(save_path, base_path, "saves\\");
     LogInfo("Base path: %s", base_path);
     LogWarn("Save path: %s", save_path);
     create_dir(save_path);
