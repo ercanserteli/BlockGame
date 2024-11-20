@@ -3,17 +3,17 @@
 #include "Definitions.h"
 
 // Platform independent create dir
-#if defined _MSC_VER
+#ifdef _WIN32
 #include <direct.h>
-#elif defined __GNUC__
+#else
 #include <sys/stat.h>
 #include <sys/types.h>
 #endif
 
 inline int32 create_dir(char *dir) {
-#if defined _MSC_VER
+#ifdef _WIN32
     return _mkdir(dir);
-#elif defined __GNUC__
+#else
     return mkdir(dir, 0777);
 #endif
 }

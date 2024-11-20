@@ -31,6 +31,7 @@ struct MainShader : Shader {
     int32 sun_space_matrix_loc;
     int32 cascade_ends_loc;
     int32 shadow_map_loc;
+    int32 shadow_map_enabled_loc;
 };
 
 struct StarShader : Shader {

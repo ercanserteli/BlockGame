@@ -156,6 +156,16 @@ void initialize(const GameState *state) {
     stbi_flip_vertically_on_write(true);
 }
 
+void switch_shadow_mode() {
+    switch (shadow_mode) {
+        case ShadowMode::NONE:
+            shadow_mode = ShadowMode::SHADOW_MAP;
+            break;
+        default:
+            shadow_mode = ShadowMode::NONE;
+    }
+}
+
 void calc_ortho_projs(const glm::mat4 &view_inverse, glm::mat4 *sun_views, const float32 aspect_ratio, const float32 fov, const float32 *cascade_ends,
                       glm::mat4 *sun_projs, GameState *state) {
     const float32 tan_half_vfov = tanf(glm::radians(fov / 2.0f));
@@ -415,6 +425,7 @@ void draw(GameState *state, const int32 screen_width, const int32 screen_height,
     glUniform1f(main_shader.specular_strength_loc, state->sun.specular_strength);
     glUniform1f(main_shader.diffuse_strength_loc, state->sun.diffuse_strength);
     glUniform1f(main_shader.culling_distance_loc, Config::Graphics::CULLING_DISTANCE);
+    glUniform1f(main_shader.shadow_map_enabled_loc, shadow_mode == ShadowMode::SHADOW_MAP);
 
     if (shadow_mode == ShadowMode::SHADOW_MAP) {
         glUniformMatrix4fv(main_shader.sun_space_matrix_loc, Config::Graphics::SHADOW_MAP_CASCADE_COUNT, GL_FALSE, glm::value_ptr(sun_space_matrices[0]));

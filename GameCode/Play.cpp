@@ -6,6 +6,7 @@
 #include "Collision.h"
 #include "GameBase.h"
 #include "Geometry.h"
+#include "Graphics.h"
 #include "ShadowDebugVisuals.h"
 #include "Sound.h"
 
@@ -32,11 +33,6 @@ BlockEntity *spawn_block_entity(GameState *state, const Vector3f &pos, const Vec
 
 void update_sun(GameState *state, float32 time_delta, const ControllerInput *controller, const ControllerInput *last_controller) {
     Sun &sun = state->sun;
-
-    // Toggle sun speed boost with F4
-    if (controller->button_f4 && !last_controller->button_f4) {
-        sun.speed_boost = sun.speed_boost == 1.f ? 20.f : 1.f;
-    }
 
     sun.age = fmod(sun.age + time_delta * Config::World::SUN_SPEED * sun.speed_boost, 2.f * PI32);
 
@@ -253,14 +249,6 @@ void update_player(GameState *state, float32 time_delta, ControllerInput *contro
         state->player.throw_mode = !state->player.throw_mode;
     }
 
-    // Toggle debug visuals with F3
-    if (!last_controller->button_f3 && controller->button_f3) {
-        state->debug_visuals_enabled = !state->debug_visuals_enabled;
-        if (state->debug_visuals_enabled) {
-            DebugVisuals::frustums_initialized = false;
-        }
-    }
-
     if (walk_direction.get_sqr_magnitude() > 0) {
         if (state->player.on_ground && !Sound::is_playing(1)) {
             Sound::play(Sound::step_sound, 1);
@@ -413,12 +401,35 @@ void update_player(GameState *state, float32 time_delta, ControllerInput *contro
     controller->mouse_wheel = 0;
 }
 
-void update(GameState *state, float32 time_delta, ControllerInput *controller, const ControllerInput *last_controller, BlockPos &b_pos_pointing,
-            uint8 &block_pointing) {
+void handle_f_functions(GameState *state, ControllerInput *controller, const ControllerInput *last_controller, int32 screen_width, int32 screen_height) {
+    // Switch shadow mode with F1
+    if (controller->button_f1 && !last_controller->button_f1) {
+        Graphics::switch_shadow_mode();
+    }
+    // Screen shot with F2
+    if (controller->button_f2 && !last_controller->button_f2) {
+        Graphics::take_screenshot(state, screen_width, screen_height);
+    }
+    // Toggle debug visuals with F3
+    if (controller->button_f3 && !last_controller->button_f3) {
+        state->debug_visuals_enabled = !state->debug_visuals_enabled;
+        if (state->debug_visuals_enabled) {
+            DebugVisuals::frustums_initialized = false;
+        }
+    }
+    // Toggle sun speed boost with F4
+    if (controller->button_f4 && !last_controller->button_f4) {
+        state->sun.speed_boost = state->sun.speed_boost == 1.f ? 20.f : 1.f;
+    }
+    // Update chunk meshes with F5
     if (controller->button_f5 && !last_controller->button_f5) {
         state->chunk_map.update_all_chunks(state->player.pos);
     }
+}
 
+void update(GameState *state, float32 time_delta, ControllerInput *controller, const ControllerInput *last_controller, BlockPos &b_pos_pointing,
+            uint8 &block_pointing, int32 screen_width, int32 screen_height) {
+    handle_f_functions(state, controller, last_controller, screen_width, screen_height);
     update_player(state, time_delta, controller, last_controller, b_pos_pointing, block_pointing);
     update_sun(state, time_delta, controller, last_controller);
     update_particles(state, time_delta);

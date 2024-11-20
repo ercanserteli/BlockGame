@@ -23,6 +23,7 @@ uniform vec3 skyColor;
 uniform float diffuseStrength;
 uniform float specularStrength;
 uniform float cascadeEnds[NUM_CASCADES];
+uniform bool shadowMapEnabled;
 
 float ShadowCalculation(int CascadeIndex, vec4 fragPosSunSpace) {
   vec3 projCoords = fragPosSunSpace.xyz;
@@ -56,12 +57,14 @@ void main() {
 
   vec3 realColor = vertexColor;
 
-  for (int i = 0; i < NUM_CASCADES; i++) {
-    if (clipSpacePosZ <= cascadeEnds[i]) {
-      shadow = ShadowCalculation(i, fragPosSunSpace[i]);
-      // realColor = shadowMapColors[i];  // uncomment for debug colors
-      break;
-    }
+  if (shadowMapEnabled) {
+      for (int i = 0; i < NUM_CASCADES; i++) {
+        if (clipSpacePosZ <= cascadeEnds[i]) {
+          shadow = ShadowCalculation(i, fragPosSunSpace[i]);
+          // realColor = shadowMapColors[i];  // uncomment for debug colors
+          break;
+        }
+      }
   }
 
   float diff = max(dot(normal, lightDir), 0.0);

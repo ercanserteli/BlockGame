@@ -147,13 +147,14 @@ struct ControllerInput {
     bool button_r3;
     bool button_select;
     bool button_start;
+    bool button_f1;
     bool button_f2;
     bool button_f3;
     bool button_f4;
     bool button_f5;
 };
 
-enum class ShadowMode { SHADOW_MAP, SHADOW_VOLUME };
+enum class ShadowMode { NONE, SHADOW_MAP, SHADOW_VOLUME };
 
 typedef void (*FinalizeFuncType)(GameMemory *);
 typedef void (*ReloadInitFuncType)(GameMemory *);

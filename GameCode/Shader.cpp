@@ -125,6 +125,7 @@ void MainShader::init_uniform_locations() {
     sun_space_matrix_loc = get_uniform_loc("sunSpaceMatrix");
     cascade_ends_loc = get_uniform_loc("cascadeEnds");
     shadow_map_loc = get_uniform_loc("shadowMap");
+    shadow_map_enabled_loc = get_uniform_loc("shadowMapEnabled");
 }
 
 void StarShader::initialize(const char *vertex_source, const char *fragment_source) {

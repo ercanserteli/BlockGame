@@ -2,10 +2,15 @@
 
 #include <SDL.h>
 #include <SDL_mixer.h>
-#include <windows.h>
 #include <filesystem>
-
 #include <iostream>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
 
 struct PlatformState {
     GameMemory game_memory = {};
@@ -24,6 +29,17 @@ static char *save_path;
 static uint32 gamepad_index = 0;
 
 SDL_GameController *gamepad_handles[Config::System::MAX_CONTROLLERS];
+
+static void *allocate_memory(void *memory_begin, size_t total_size) {
+    void *ptr = nullptr;
+#ifdef _WIN32
+    ptr = VirtualAlloc(memory_begin, total_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
+    ptr = mmap(memory_begin, total_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (ptr == MAP_FAILED) ptr = nullptr;
+#endif
+    return ptr;
+}
 
 #ifdef DEBUG
 static void begin_recording(PlatformState &platform_state) {
@@ -134,6 +150,9 @@ void handle_events(ControllerInput &controller, PlatformState &platform_state) {
                     break;
                 case SDLK_ESCAPE:
                     controller.button_select = is_down;
+                    break;
+                case SDLK_F1:
+                    controller.button_f1 = is_down;
                     break;
                 case SDLK_F2:
                     controller.button_f2 = is_down;
@@ -340,6 +359,17 @@ bool load_functions_from_game_lib(const char *lib_path, InitializeFuncType *init
     return true;
 }
 
+bool copy_file(char *src_path, char *dst_path) {
+    try {
+        if (std::filesystem::copy_file(src_path, dst_path, std::filesystem::copy_options::overwrite_existing)) {
+            return true;
+        }
+    } catch (const std::filesystem::filesystem_error &e) {
+        LogWarn("Filesystem error: %s", e.what());
+    }
+    return false;
+}
+
 bool load_game_lib(char *base_path, InitializeFuncType *initialize_func, ReloadInitFuncType *reload_init_func, UpdateFuncType *update_func, FinalizeFuncType *finalize_func) {
 #ifndef DEBUG
     return load_functions_from_game_lib("GameCode.dll", initialize_func, reload_init_func, update_func, finalize_func);
@@ -352,7 +382,7 @@ bool load_game_lib(char *base_path, InitializeFuncType *initialize_func, ReloadI
 
     int32 tries = 50;
     while (true) {
-        if (CopyFile(org_filename, new_filename, false)) {
+        if (copy_file(org_filename, new_filename)) {
             const bool result = load_functions_from_game_lib("GameCode_temp.dll", initialize_func, reload_init_func, update_func, finalize_func);
             if (!result) {
                 return false;
@@ -412,7 +442,7 @@ void log_fps(uint64 last_counter, uint64 before_sleep_counter, uint64 end_counte
              ms_per_frame_total - ms_per_frame_work, fps, work_fps);
 }
 
-bool allocate_memory(GameMemory &memory) {
+bool init_memory(GameMemory &memory) {
     memory.permanent_storage_size = Megabytes(128);
 #ifdef DEBUG
     // 2 MB is more than 10 minutes of input record
@@ -420,12 +450,8 @@ bool allocate_memory(GameMemory &memory) {
 #endif
     memory.transient_storage_size = Megabytes(64);
     const uint64 total_size = memory.permanent_storage_size + memory.record_storage_size + memory.transient_storage_size;
-#ifdef DEBUG
-    uint64 memory_begin = Terabytes(2);
-#else
-    uint64 memory_begin = 0;
-#endif
-    void *memory_pointer = VirtualAlloc((LPVOID)memory_begin, total_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    void* memory_begin = (void*)Terabytes(2);
+    void *memory_pointer = allocate_memory(memory_begin, total_size);
     if (!memory_pointer) {
         LogError("Could not allocate memory!");
         return false;
@@ -536,7 +562,7 @@ int32 main(int32, char **) {
     }
 
     PlatformState platform_state = {};
-    if (!allocate_memory(platform_state.game_memory)) {
+    if (!init_memory(platform_state.game_memory)) {
         return 1;
     }
 

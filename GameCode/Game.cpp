@@ -50,12 +50,7 @@ extern "C" dll_export void game_loop(const GameMemory *memory, const SDL_Surface
     BlockPos b_pos_pointing;
     uint8 block_pointing;
 
-    // Screen shot with F2
-    if (!last_controller.button_f2 && controller->button_f2) {
-        Graphics::take_screenshot(state, screen_width, screen_height);
-    }
-
-    Play::update(state, time_delta, controller, &last_controller, b_pos_pointing, block_pointing);
+    Play::update(state, time_delta, controller, &last_controller, b_pos_pointing, block_pointing, screen_width, screen_height);
     Graphics::draw(state, screen_width, screen_height, window, block_pointing, b_pos_pointing, time_delta);
 
     last_controller = *controller;
