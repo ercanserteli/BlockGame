@@ -18,7 +18,14 @@ add_library(GameCode SHARED
 
 file(GLOB HEADER_FILES "*.h")
 file(GLOB SHADER_FILES "*.glsl")
-file(GLOB SHADER_HEADER_FILES "shaders/*.h")
+set(SHADER_HEADER_FILES)
+foreach(SHADER_FILE IN LISTS SHADER_FILES)
+    get_filename_component(SHADER_NAME "${SHADER_FILE}" NAME_WE)
+    get_filename_component(SHADER_DIR "${SHADER_FILE}" DIRECTORY)
+    set(SHADER_HEADER_FILE "${SHADER_DIR}/shaders/${SHADER_NAME}_glsl.h")
+    list(APPEND SHADER_HEADER_FILES "${SHADER_HEADER_FILE}")
+endforeach()
+
 target_sources(GameCode PRIVATE ${HEADER_FILES} ${SHADER_FILES} ${SHADER_HEADER_FILES})
 source_group("Header Files" FILES ${HEADER_FILES})
 source_group("Shader Files" FILES ${SHADER_FILES})
@@ -34,7 +41,7 @@ target_link_libraries(GameCode PRIVATE SDL2::SDL2 SDL2_mixer::SDL2_mixer)
 add_custom_command(
     PRE_BUILD
     OUTPUT ${SHADER_HEADER_FILES}
-    COMMAND cmd /c "${CMAKE_SOURCE_DIR}/embed_shaders.bat"
+    COMMAND cmd /c "${CMAKE_SOURCE_DIR}/embed_shaders.bat" $<CONFIG>
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     DEPENDS ${SHADER_FILES}
     COMMENT "Embedding shaders in header files"
