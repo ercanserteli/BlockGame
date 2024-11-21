@@ -4,8 +4,11 @@ This is a block game project written in C++ with SDL and OpenGL. It is more of a
 
 - The project is made of two pieces, GameCode is built as a dynamic library and GameBase is an executable that loads it as a library. GameCode can be modified and recompiled, and GameBase will automatically hot-reload the new game code seamlessly.
 - The game is auto saved and loaded.
+- The world randomly generates with simplex noise.
+- Infinite world, including the y axis (you can build infinitely high).
 - It supports controllers but I didn't test it much.
-- It runs on windows but it doesn't depend on windows headers, it can be easily ported to linux, etc.
+- It runs on windows but it doesn't depend on windows headers, it can be easily ported to other platforms.
+- There are no textures, only colors.
 
 ## Controls
 
