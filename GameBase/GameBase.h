@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <glm/gtc/quaternion.hpp>
 
 #include "Chunk.h"
@@ -104,7 +105,7 @@ struct Sun {
 struct GameState {
     MemoryArena world_arena;
     MemoryArena scratch_arena;
-    char *save_path = nullptr;
+    std::filesystem::path save_path;
     char world_name[32] = "world";
     uint32 particle_count = 0;
     uint32 entity_count = 0;
@@ -119,7 +120,9 @@ struct GameState {
     BlockEntity entities[Config::Game::ENTITY_LIMIT];
     ChunkMap chunk_map;
 
-    void get_save_file_name(char *filename) const { ASSERT(snprintf(filename, Config::System::MAX_PATH_LEN, "%s%s/state.erc", save_path, world_name) > 0); }
+    void get_save_file_name(std::filesystem::path &filename) const {
+        filename = save_path / world_name / "state.erc";
+    }
 };
 
 struct ControllerInput {
@@ -158,5 +161,5 @@ enum class ShadowMode { NONE, SHADOW_MAP, SHADOW_VOLUME };
 
 typedef void (*FinalizeFuncType)(GameMemory *);
 typedef void (*ReloadInitFuncType)(GameMemory *);
-typedef void (*InitializeFuncType)(GameMemory *, char *);
+typedef void (*InitializeFuncType)(GameMemory *, const std::filesystem::path &);
 typedef void (*UpdateFuncType)(GameMemory *, SDL_Surface *, SDL_Window *, ControllerInput *, float32);

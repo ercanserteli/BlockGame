@@ -50,7 +50,6 @@ struct Game {
 };
 
 struct System {
-    static constexpr uint32 MAX_PATH_LEN = 260;
     static constexpr uint32 MAX_CONTROLLERS = 4;
 };
 }  // namespace Config

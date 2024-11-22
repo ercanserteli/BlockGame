@@ -240,11 +240,8 @@ void take_screenshot(GameState *state, int32 screen_width, int32 screen_height) 
     auto *pixels = (uint8 *)push_size(state->scratch_arena, pixels_size);
     glReadPixels(0, 0, screen_width, screen_height, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
-    char ss_filepath[Config::System::MAX_PATH_LEN];
-    strcpy_s(ss_filepath, Config::System::MAX_PATH_LEN, state->save_path);
-    strcat_s(ss_filepath, "screenshot.bmp");
-
-    if (!stbi_write_bmp(ss_filepath, screen_width, screen_height, 3, pixels)) {
+    const std::filesystem::path ss_filepath = state->save_path / "screenshot.bmp";
+    if (!stbi_write_bmp(ss_filepath.string().c_str(), screen_width, screen_height, 3, pixels)) {
         LogError("Could not take screenshot");
     }
 

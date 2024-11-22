@@ -10,7 +10,7 @@
 #include "Save.h"
 #include "Sound.h"
 
-extern "C" dll_export void initialize(const GameMemory *memory, char *save_path) {
+extern "C" dll_export void initialize(const GameMemory *memory, const std::filesystem::path &save_path) {
     auto *state = new (memory->permanent_storage) GameState();
     state->save_path = save_path;
     state->world_arena = MemoryArena((uint8 *)memory->permanent_storage + sizeof(GameState), memory->permanent_storage_size - sizeof(GameState));
@@ -19,9 +19,8 @@ extern "C" dll_export void initialize(const GameMemory *memory, char *save_path)
     state->chunk_map.initialize(state);
 
     if (!load_state(state)) {
-        char save_dir[Config::System::MAX_PATH_LEN];
-        join_path(save_dir, state->save_path, state->world_name);
-        create_dir(save_dir);
+        const std::filesystem::path save_dir = state->save_path / state->world_name;
+        std::filesystem::create_directory(save_dir);
     }
 
     Graphics::initialize(state);

@@ -24,8 +24,8 @@ struct PlatformState {
 
 static bool closing = false;
 static void *game_lib_handle;
-static uint64 game_lib_time;
-static char save_path[Config::System::MAX_PATH_LEN];
+static std::filesystem::file_time_type game_lib_time;
+static std::filesystem::path save_path;
 static uint32 gamepad_index = 0;
 
 SDL_GameController *gamepad_handles[Config::System::MAX_CONTROLLERS];
@@ -320,18 +320,13 @@ static void sdl_init_gamepads() {
     }
 }
 
-bool is_game_lib_out_of_date(const char *base_path) {
-    char org_filename[Config::System::MAX_PATH_LEN];
-    join_path(org_filename, base_path, "GameCode.dll");
-
-    struct _stat64 file_stat = {};
-    _stati64(((const char *)org_filename), &file_stat);
-    return game_lib_time != file_stat.st_mtime;
+bool is_game_lib_out_of_date(const std::filesystem::path& base_path) {
+    return game_lib_time != std::filesystem::last_write_time(base_path / "GameCode.dll");
 }
 
-bool load_functions_from_game_lib(const char *lib_path, InitializeFuncType *initialize_func, ReloadInitFuncType *reload_init_func,
+bool load_functions_from_game_lib(const char *lib_filename, InitializeFuncType *initialize_func, ReloadInitFuncType *reload_init_func,
                                   UpdateFuncType *update_func, FinalizeFuncType *finalize_func) {
-    game_lib_handle = SDL_LoadObject(lib_path);
+    game_lib_handle = SDL_LoadObject(lib_filename);
     if (!game_lib_handle) {
         LogError("Could not load the game lib!");
         return false;
@@ -359,7 +354,7 @@ bool load_functions_from_game_lib(const char *lib_path, InitializeFuncType *init
     return true;
 }
 
-bool copy_file(char *src_path, char *dst_path) {
+bool try_copy_file(const std::filesystem::path& src_path, const std::filesystem::path& dst_path) {
     try {
         if (std::filesystem::copy_file(src_path, dst_path, std::filesystem::copy_options::overwrite_existing)) {
             return true;
@@ -370,28 +365,22 @@ bool copy_file(char *src_path, char *dst_path) {
     return false;
 }
 
-bool load_game_lib(const char *base_path, InitializeFuncType *initialize_func, ReloadInitFuncType *reload_init_func, UpdateFuncType *update_func, FinalizeFuncType *finalize_func) {
+bool load_game_lib(const std::filesystem::path& base_path, InitializeFuncType *initialize_func, ReloadInitFuncType *reload_init_func, UpdateFuncType *update_func, FinalizeFuncType *finalize_func) {
 #ifndef DEBUG
     return load_functions_from_game_lib("GameCode.dll", initialize_func, reload_init_func, update_func, finalize_func);
 #else
-    char org_filename[Config::System::MAX_PATH_LEN];
-    char new_filename[Config::System::MAX_PATH_LEN];
 
-    join_path(org_filename, base_path, "GameCode.dll");
-    join_path(new_filename, base_path, "GameCode_temp.dll");
+    const std::filesystem::path org_filename = base_path / "GameCode.dll";
+    const std::filesystem::path new_filename = base_path / "GameCode_temp.dll";
 
     int32 tries = 50;
     while (true) {
-        if (copy_file(org_filename, new_filename)) {
+        if (try_copy_file(org_filename, new_filename)) {
             const bool result = load_functions_from_game_lib("GameCode_temp.dll", initialize_func, reload_init_func, update_func, finalize_func);
             if (!result) {
                 return false;
             }
-
-            struct _stat64 file_stat = {};
-            _stati64(((const char *)org_filename), &file_stat);
-            game_lib_time = file_stat.st_mtime;
-
+            game_lib_time = std::filesystem::last_write_time(org_filename);
             return true;
         } else {
             LogWarn("Could not find the game lib!");
@@ -419,7 +408,8 @@ static float32 sdl_get_seconds_elapsed(uint64 old_counter, uint64 current_counte
     return ((float32)(current_counter - old_counter) / (float32)(perf_frequency));
 }
 
-void handle_hot_reload(char *base_path, InitializeFuncType initialize_func, ReloadInitFuncType reload_init_func, FinalizeFuncType finalize_func,
+void handle_hot_reload(const std::filesystem::path &base_path, InitializeFuncType initialize_func, ReloadInitFuncType reload_init_func,
+                       FinalizeFuncType finalize_func,
                        UpdateFuncType game_loop_func, PlatformState &platform_state) {
     if (is_game_lib_out_of_date(base_path)) {
         unload_game_lib();
@@ -539,11 +529,10 @@ int32 main(int32, char **) {
         LogError("SDL_mixer could not initialize! SDL_mixer Error: %s", Mix_GetError());
     }
 
-    char *base_path = SDL_GetBasePath();
-    join_path(save_path, base_path, "saves\\");
-    LogInfo("Base path: %s", base_path);
-    LogWarn("Save path: %s", save_path);
-    create_dir(save_path);
+    const std::filesystem::path base_path = SDL_GetBasePath();
+    save_path = base_path / "saves";
+    LogInfo("Save path: %s", save_path.string().c_str());
+    std::filesystem::create_directory(save_path);
 
     InitializeFuncType game_initialize;
     ReloadInitFuncType game_on_reload;

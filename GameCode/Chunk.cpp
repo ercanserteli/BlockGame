@@ -283,9 +283,9 @@ void Chunk::initialize(const int32 chunk_x, const int32 chunk_y, const int32 chu
 
 void Chunk::save_to_file() const {
     if (blocks != nullptr && filled && dirty) {
-        char save_filename[Config::System::MAX_PATH_LEN];
+        std::filesystem::path save_filename;
         get_save_file_name(save_filename);
-        SDL_RWops *fp = SDL_RWFromFile(save_filename, "wb");
+        SDL_RWops *fp = SDL_RWFromFile(save_filename.string().c_str(), "wb");
         if (fp != nullptr) {
             const size_t num = SDL_RWwrite(fp, blocks, Config::World::CHUNK_SIZE * Config::World::CHUNK_SIZE * Config::World::CHUNK_SIZE, 1);
             SDL_RWclose(fp);
@@ -316,9 +316,9 @@ void Chunk::after_fill() {
 }
 
 bool Chunk::load_from_file() {
-    char save_filename[Config::System::MAX_PATH_LEN];
+    std::filesystem::path save_filename;
     get_save_file_name(save_filename);
-    SDL_RWops *fp = SDL_RWFromFile(save_filename, "rb");
+    SDL_RWops *fp = SDL_RWFromFile(save_filename.string().c_str(), "rb");
     if (fp != nullptr) {
         const uint64 num = SDL_RWread(fp, blocks, Config::World::CHUNK_SIZE * Config::World::CHUNK_SIZE * Config::World::CHUNK_SIZE, 1);
         SDL_RWclose(fp);
@@ -333,9 +333,10 @@ bool Chunk::load_from_file() {
     return false;
 }
 
-void Chunk::get_save_file_name(char *filename) const {
-    ASSERT(snprintf(filename, Config::System::MAX_PATH_LEN, "%s%s/c_%d_%d_%d.erc", chunk_map->game_state->save_path, chunk_map->game_state->world_name, chunk_x,
-                    chunk_y, chunk_z) > 0);
+void Chunk::get_save_file_name(std::filesystem::path &filename) const {
+    char chunk_filename[100];
+    ASSERT(snprintf(chunk_filename, 100, "c_%d_%d_%d.erc", chunk_x, chunk_y, chunk_z) > 0);
+    filename = chunk_map->game_state->save_path / chunk_map->game_state->world_name / chunk_filename;
 }
 
 /////////////////////// ChunkMap /////////////////////////////////////

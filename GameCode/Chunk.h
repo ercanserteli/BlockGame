@@ -7,6 +7,12 @@
 
 #define BID(x, y, z) (((z) * Config::World::CHUNK_SIZE * Config::World::CHUNK_SIZE) + ((y) * Config::World::CHUNK_SIZE) + ((x)))
 
+namespace std {
+namespace filesystem {
+class path;
+}
+}
+
 struct MainShader;
 struct GameState;
 struct ChunkMap;
@@ -26,7 +32,7 @@ struct Chunk {
     AABB get_aabb();
     void save_to_file() const;
     bool load_from_file();
-    void get_save_file_name(char *filename) const;
+    void get_save_file_name(std::filesystem::path &filename) const;
     uint8 get_block(const int32 x, const int32 y, const int32 z) const {
         if (!blocks || x >= Config::World::CHUNK_SIZE || x < 0 || y >= Config::World::CHUNK_SIZE || y < 0 || z >= Config::World::CHUNK_SIZE || z < 0) {
             return 0;

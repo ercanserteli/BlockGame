@@ -6,9 +6,9 @@
 #include "GameBase.h"
 
 void save_state(const GameState *state) {
-    char save_filename[Config::System::MAX_PATH_LEN];
+    std::filesystem::path save_filename;
     state->get_save_file_name(save_filename);
-    SDL_RWops *fp = SDL_RWFromFile(save_filename, "wb");
+    SDL_RWops *fp = SDL_RWFromFile(save_filename.string().c_str(), "wb");
     if (fp != nullptr) {
         size_t num = SDL_RWwrite(fp, &state->player, sizeof(state->player), 1);
         if (num != 1) {
@@ -40,9 +40,9 @@ void generate_stars(Vector3f *stars) {
 }
 
 bool load_state(GameState *state) {
-    char save_filename[Config::System::MAX_PATH_LEN];
+    std::filesystem::path save_filename;
     state->get_save_file_name(save_filename);
-    SDL_RWops *fp = SDL_RWFromFile(save_filename, "rb");
+    SDL_RWops *fp = SDL_RWFromFile(save_filename.string().c_str(), "rb");
     if (fp == nullptr) {
         LogDebug("Could not open save (state) file for loading!");
         return false;
